@@ -1,39 +1,60 @@
-import React, { Component } from 'react';
 import logo from './logo.svg';
+import React, { Component } from 'react';
+import logger from 'redux-logger';
+import thunk from 'redux-thunk';
+import axios from 'axios';
 import './App.css';
 
-import { combineReducers, createStore } from 'redux';
+import { combineReducers, createStore, applyMiddleware } from 'redux';
 
-const studentReducer = function(state={}, action) {
+const initialState = {
+  fetching: false,
+  fetched: false,
+  users: [],
+  error: null
+}
+
+const reducer = function(state=initialState, action) {
   switch (action.type) {
-    case 'CHANGE_NAME':
-      state = {...state, name: action.payload}
-      console.log('changing name');
+    case 'FETCH_USERS_START': {
+      return {...state, fetching: true}
+      break
+    }
+    case 'RECEIVE_USERS': {
+      return {
+        ...state,
+        users: action.payload,
+        fetching: false,
+        fetched: true
+      }
       break;
-    case 'CHANGE_AGE':
-      console.log('changing age');
-      break;
+    }
+    case 'FETCH_USERS_ERROR': {
+      return {
+        ...state,
+        fetching: false,
+        error: action.payload
+      }
+      break
+    }
   }
-  return state;// new state
 }
 
-const awardsReducer = function(state=[], action) {
-  return state;// new state
-}
-
-const reducers = combineReducers({
-  student: studentReducer,
-  awards: awardsReducer
-})
-
-const store = createStore(reducers);
-
-store.subscribe(() => {
-  console.log('store changed', store.getState());
-})
+const middleware = applyMiddleware(thunk, logger); // Chuck all middlware in here
+const store = createStore(reducer, middleware);
 
 // type prop required. Will not process otherwise. Payload is conventional
-store.dispatch({type: 'CHANGE_NAME', payload: 'Simone'})
+store.dispatch((dispatch) => {
+  dispatch({type: 'FETCH_USERS_START'})
+  axios.get('http://rest.learncode.academy/api/wstern/users')
+    .then((response) => {
+      dispatch({type: 'RECEIVE_USERS', payload: response.data})
+    })
+    .catch((err) => {
+      dispatch({type: 'FETCH_USERS_ERROR', payload: err})
+    });
+  // do something asynchronous
+})
 
 
 
